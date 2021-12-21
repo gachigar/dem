@@ -2,25 +2,18 @@ let canvas = document.getElementById('canvas');
 
 const maxValue = 2048;
 
-var audioCtx = new AudioContext();
-var destination = audioCtx.destination;
-var analyserRaw = audioCtx.createAnalyser();
-var source = audioCtx.createMediaElementSource(player);
-var gainNode = audioCtx.createGain();
-gainNode.gain.value = 0;
+var audioCtx;
+var destination;
+var analyserRaw;
+var source;
+var gainNode;
 
-source.connect(analyserRaw);
-source.connect(gainNode);
-gainNode.connect(destination);
+var analyserFreq;
 
-var analyserFreq = audioCtx.createAnalyser();
-source.connect(analyserFreq);
-
-analyserRaw.fftSize = 2048;
-analyserFreq.fftSize = 2048;
-analyserFreq.smoothingTimeConstant = 0.7;
 /*analyserFreq.maxDecibels = 0;
  analyserFreq.minDecibels = -100;*/
+
+fp = false;
 
 var pl1 = document.getElementById("player");
 pl1.volume = 0.5;
@@ -33,11 +26,34 @@ document.addEventListener('click', function (e) {
     pl2.volume = 0.5;
 
     if (pl1.paused) {
+        if (!fp) {
+            audioCtx = new AudioContext();
+            destination = audioCtx.destination;
+            analyserRaw = audioCtx.createAnalyser();
+            source = audioCtx.createMediaElementSource(player);
+            gainNode = audioCtx.createGain();
+            gainNode.gain.value = 0;
+
+            source.connect(analyserRaw);
+            source.connect(gainNode);
+            gainNode.connect(destination);
+
+            analyserFreq = audioCtx.createAnalyser();
+            source.connect(analyserFreq);
+
+            analyserRaw.fftSize = 2048;
+            analyserFreq.fftSize = 2048;
+            analyserFreq.smoothingTimeConstant = 0.7;
+        }
+        /*analyserFreq.maxDecibels = 0;
+         analyserFreq.minDecibels = -100;*/
+
         pl1.play();
-        pl2.play();
+        setTimeout(() => pl2.play(), 10);
     } else {
+        setTimeout(() => pl2.pause(), 10);
         pl1.pause();
-        pl2.pause();
+        fp = true;
     }
 })
 
@@ -49,6 +65,23 @@ count = 2048;
 var dataRaw = new Float32Array(count);
 var dataFreq = new Uint8Array(1024);
 var t = 0;
+
+function readTextFile(file) {
+    var rawFile = new XMLHttpRequest();
+    var allText;
+    rawFile.open("GET", file, false);
+    rawFile.onreadystatechange = function () {
+        if (rawFile.readyState === 4) {
+            if (rawFile.status === 200 || rawFile.status == 0) {
+                allText = rawFile.responseText;
+                //alert(allText);
+            }
+        }
+    }
+    rawFile.send(null);
+    return allText;
+}
+
 function vol(freqd, start, end) {
     var s = 0;
     for (var i = start; i < end + 1; i++) {
@@ -87,6 +120,45 @@ var gui_params = {
 };
 var width = window.innerWidth,
     height = window.innerHeight;
+i
+var textar = [];
+var begar = [];
+var endar = [];
+pos = 0;
+last_ypos = 0;
+last_xpos = 0;
+last_len = 0;
+last_end = 0;
+
+function textIt(start, end, word) {
+    var textnode = document.createElement("div");
+    textnode.innerHTML = word;
+    //textnode.id = start;
+    textnode.classList.add("text-tr");
+    if (start - 25 < last_end) {
+        last_xpos = last_xpos + 1 + last_len * 2.5;
+    } else {
+        last_xpos = (Math.random() * 3 + 8);
+        last_ypos = (Math.random() * 20 + 16);
+    }
+    if (last_xpos > 28) {
+        last_xpos = (Math.random() * 3 + 8);
+        last_ypos = last_ypos + 10;
+    }
+    if (last_ypos > 80) {
+        last_ypos = (Math.random() * 20 + 16);
+        last_xpos = (Math.random() * 3 + 8);
+    }
+    textnode.style.top = last_ypos.toString() + "vh";
+    textnode.style.left = (last_xpos + 3).toString() + "vw";
+    document.getElementById("text-disp").appendChild(textnode);
+
+    setTimeout(() => textnode.style.color = "rgba(255, 255, 255, 1)", 1);
+    last_len = word.length;
+    last_end = end;
+    setTimeout(() => textnode.classList.add("text-hide"), end - start);
+}
+
 init();
 
 var geometryUF = new THREE.CircleGeometry(12, 64);
@@ -102,7 +174,7 @@ var circleF = new THREE.Mesh(geometryF, materialF);
 scene.add(circleF);
 
 var geometryCE = new THREE.CircleGeometry(10, 32);
-var textureCE = new THREE.TextureLoader().load("CRTLOGCB2.svg");
+var textureCE = new THREE.TextureLoader().load("CRTLOGCBBIG.svg");
 //const materialCE = new THREE.MeshBasicMaterial({ color: 0xaaaaaa });
 var matCE = new THREE.MeshBasicMaterial({
     color: "#7edee2",
@@ -115,6 +187,25 @@ scene.add(circleCE);
 
 animate();
 function init() {
+    txt = readTextFile("textKostylPrepared.xml");
+    //console.log(txt)
+    var lines = txt.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+        lw = lines[i].indexOf('>') + 1;
+        rw = lines[i].indexOf('<', 2);
+        console.log(lines[i].substring(lw, rw));
+        textar.push(lines[i].substring(lw, rw));
+
+        lalb = lines[i].indexOf('begin="') + 7;
+        ralb = lines[i].indexOf('"', lalb + 1);
+        console.log(lines[i].substring(lalb, ralb));
+        begar.push(parseInt(lines[i].substring(lalb, ralb)));
+
+        lale = lines[i].indexOf('end="') + 5;
+        rale = lines[i].indexOf('"', lale + 1);
+        console.log(lines[i].substring(lale, rale));
+        endar.push(parseInt(lines[i].substring(lale, rale)));
+    }
 
     if (gui) gui.destroy();
     gui = new dat.GUI();
@@ -148,6 +239,7 @@ function init() {
 
     (function () {
         let script = document.createElement('script');
+        script.src = '//rawgit.com/mrdoob/stats.js/master/build/stats.min.js';
         script.onload = function () {
             let stats = new Stats();
             document.body.appendChild(stats.dom);
@@ -156,7 +248,7 @@ function init() {
                 requestAnimationFrame(loop)
             });
         };
-        script.src = '//rawgit.com/mrdoob/stats.js/master/build/stats.min.js';
+
         document.head.appendChild(script);
     })();
     renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
@@ -287,16 +379,16 @@ function init() {
 
             }
             renderPass = new THREE.RenderPass(scene, camera);
-            shaderPass = new THREE.ShaderPass(THREE.FXAAShader);
+            //shaderPass = new THREE.ShaderPass(THREE.FXAAShader);
             //shaderPass.uniforms['resolution'].value.set(1 / width, 1 / height);
             //shaderPass.renderToScreen = false;
             //copyPass = new THREE.ShaderPass(THREE.CopyShader);
-            bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1, 0.4, 0.45); //1.0, 9, 0.5, 512););
+            bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1, 0.4, 0.46); //1.0, 9, 0.5, 512););
             bloomPass.renderToScreen = true;
             //copyPass.renderToScreen = true;
             composer = new THREE.EffectComposer(renderer);
             composer.addPass(renderPass);
-            composer.addPass(shaderPass);
+            //composer.addPass(shaderPass);
             composer.addPass(bloomPass);
         }
 
@@ -306,7 +398,6 @@ function init() {
 }
 
 function animate() {
-
     requestAnimationFrame(animate);
     let length = particles.length;
     while (length--) {
@@ -322,91 +413,98 @@ function animate() {
                 Math.random() * 1000 - 100);
         }
     }
-    analyserRaw.getFloatTimeDomainData(dataRaw);
-    analyserFreq.getByteFrequencyData(dataFreq);
-    /*for (let i = 0; i < Math.floor(partcount / 4); i++) {
-     scene.remove(scene.getObjectByName(i));
-     part[i].material.opacity = (Math.pow((vol(dataFreq, 1, 8) / 20 - 9.5), 2) * 20 / 240);
-     let position = new THREE.Vector3();
-     position.setFromMatrixPosition(part[i].matrixWorld);
-     let lightPoint = new THREE.PointLight(0x7edee2, (Math.pow((vol(dataFreq, 1, 8) / 20 - 9.5), 2) * 20 / 240) * 30, 240, 2);
-     lightPoint.position.set(position.x, position.y, position.z + 2);
-     lightPoint.name = i;
-     scene.add(lightPoint);
-     }
-     for (let i = Math.floor(partcount / 4); i < Math.floor(partcount / 2); i++) {
-     scene.remove(scene.getObjectByName(i));
-     part[i].material.opacity = (vol(dataFreq, 128, 256) / 2) / 50;
-     let position = new THREE.Vector3();
-     position.setFromMatrixPosition(part[i].matrixWorld);
-     let lightPoint = new THREE.PointLight(0xe2375f, (vol(dataFreq, 128, 256) / 2) / 50 * 30, 240, 2);
-     lightPoint.position.set(position.x, position.y, position.z + 2);
-     lightPoint.name = i;
-     scene.add(lightPoint);
-     }
-     for (let i = Math.floor(partcount / 2); i < partcount; i++) {
-     scene.remove(scene.getObjectByName(i));
-     part[i].material.opacity = vol(dataFreq, i * 8, (i + 1) * 8) / 50;
-     let position = new THREE.Vector3();
-     position.setFromMatrixPosition(part[i].matrixWorld);
-     let lightPoint = new THREE.PointLight(0xaf34e2, vol(dataFreq, i * 8, (i + 1) * 8) / 50 * 30, 240, 2);
-     lightPoint.position.set(position.x, position.y, position.z + 2);
-     lightPoint.name = i;
-     scene.add(lightPoint);
-     }*/
+    if (!pl1.paused) {
+        analyserRaw.getFloatTimeDomainData(dataRaw);
+        analyserFreq.getByteFrequencyData(dataFreq);
+        /*for (let i = 0; i < Math.floor(partcount / 4); i++) {
+         scene.remove(scene.getObjectByName(i));
+         part[i].material.opacity = (Math.pow((vol(dataFreq, 1, 8) / 20 - 9.5), 2) * 20 / 240);
+         let position = new THREE.Vector3();
+         position.setFromMatrixPosition(part[i].matrixWorld);
+         let lightPoint = new THREE.PointLight(0x7edee2, (Math.pow((vol(dataFreq, 1, 8) / 20 - 9.5), 2) * 20 / 240) * 30, 240, 2);
+         lightPoint.position.set(position.x, position.y, position.z + 2);
+         lightPoint.name = i;
+         scene.add(lightPoint);
+         }
+         for (let i = Math.floor(partcount / 4); i < Math.floor(partcount / 2); i++) {
+         scene.remove(scene.getObjectByName(i));
+         part[i].material.opacity = (vol(dataFreq, 128, 256) / 2) / 50;
+         let position = new THREE.Vector3();
+         position.setFromMatrixPosition(part[i].matrixWorld);
+         let lightPoint = new THREE.PointLight(0xe2375f, (vol(dataFreq, 128, 256) / 2) / 50 * 30, 240, 2);
+         lightPoint.position.set(position.x, position.y, position.z + 2);
+         lightPoint.name = i;
+         scene.add(lightPoint);
+         }
+         for (let i = Math.floor(partcount / 2); i < partcount; i++) {
+         scene.remove(scene.getObjectByName(i));
+         part[i].material.opacity = vol(dataFreq, i * 8, (i + 1) * 8) / 50;
+         let position = new THREE.Vector3();
+         position.setFromMatrixPosition(part[i].matrixWorld);
+         let lightPoint = new THREE.PointLight(0xaf34e2, vol(dataFreq, i * 8, (i + 1) * 8) / 50 * 30, 240, 2);
+         lightPoint.position.set(position.x, position.y, position.z + 2);
+         lightPoint.name = i;
+         scene.add(lightPoint);
+         }*/
 
-    //!for (let i = 0; i < Math.floor(partcount / 4); i++) {
-    //!    part[i].material.opacity = (Math.pow((vol(dataFreq, 1, 8) / 20), 2) * 20 / 240);
-    //!    let position = new THREE.Vector3();
-    //!    position.setFromMatrixPosition(part[i].matrixWorld);
-    //!    let lightPoint = scene.getObjectByName(i);
-    //!    lightPoint.position.set(position.x, position.y, position.z + 2);
-    //!    lightPoint.intensity = (Math.pow((vol(dataFreq, 1, 8) / 20), 2) * 20 / 240) * 30;
-    //!}
-    //!for (let i = Math.floor(partcount / 4); i < Math.floor(partcount / 2); i++) {
-    //!    part[i].material.opacity = (vol(dataFreq, 128, 256) / 2) / 50;
-    //!    let position = new THREE.Vector3();
-    //!    position.setFromMatrixPosition(part[i].matrixWorld);
-    //!    let lightPoint = scene.getObjectByName(i);
-    //!    lightPoint.position.set(position.x, position.y, position.z + 2);
-    //!    lightPoint.intensity = (vol(dataFreq, 128, 256) / 2) / 50 * 30;
-    //!}
-    //!for (let i = Math.floor(partcount / 2); i < partcount; i++) {
-    //!    part[i].material.opacity = vol(dataFreq, i * 8, (i + 1) * 8) / 50;
-    //!    let position = new THREE.Vector3();
-    //!    position.setFromMatrixPosition(part[i].matrixWorld);
-    //!    let lightPoint = scene.getObjectByName(i);
-    //!    lightPoint.position.set(position.x, position.y, position.z + 2);
-    //!    lightPoint.intensity = vol(dataFreq, i * 8, (i + 1) * 8) / 50 * 30;
-    //!}
-
-    circleUF.scale.x = 1 + 0*vol(dataFreq, 128, 256) / 1500 + vol(dataFreq, 1, 6) / 1000;; // SCALE
-    circleUF.scale.y = 1 + 0 *vol(dataFreq, 128, 256) / 1500 + vol(dataFreq, 1, 6) / 1000;; // SCALE
-    circleUF.scale.z = 1 + 0 *vol(dataFreq, 128, 256) / 1500 + vol(dataFreq, 1, 6) / 1000;; // SCALE
-    circleUF.material.transparent = true;
-    circleUF.material.opacity = 0.31 + vol(dataFreq, 128, 256) / 900;
-
-
-    circleF.scale.x = 1 + vol(dataFreq, 1, 6) / 1000; // SCALE
-    circleF.scale.y = 1 + vol(dataFreq, 1, 6) / 1000; // SCALE
-    circleF.scale.z = 1 + vol(dataFreq, 1, 6) / 1000; // SCALE
-    circleF.material.transparent = true;
+        //!for (let i = 0; i < Math.floor(partcount / 4); i++) {
+        //!    part[i].material.opacity = (Math.pow((vol(dataFreq, 1, 8) / 20), 2) * 20 / 240);
+        //!    let position = new THREE.Vector3();
+        //!    position.setFromMatrixPosition(part[i].matrixWorld);
+        //!    let lightPoint = scene.getObjectByName(i);
+        //!    lightPoint.position.set(position.x, position.y, position.z + 2);
+        //!    lightPoint.intensity = (Math.pow((vol(dataFreq, 1, 8) / 20), 2) * 20 / 240) * 30;
+        //!}
+        //!for (let i = Math.floor(partcount / 4); i < Math.floor(partcount / 2); i++) {
+        //!    part[i].material.opacity = (vol(dataFreq, 128, 256) / 2) / 50;
+        //!    let position = new THREE.Vector3();
+        //!    position.setFromMatrixPosition(part[i].matrixWorld);
+        //!    let lightPoint = scene.getObjectByName(i);
+        //!    lightPoint.position.set(position.x, position.y, position.z + 2);
+        //!    lightPoint.intensity = (vol(dataFreq, 128, 256) / 2) / 50 * 30;
+        //!}
+        //!for (let i = Math.floor(partcount / 2); i < partcount; i++) {
+        //!    part[i].material.opacity = vol(dataFreq, i * 8, (i + 1) * 8) / 50;
+        //!    let position = new THREE.Vector3();
+        //!    position.setFromMatrixPosition(part[i].matrixWorld);
+        //!    let lightPoint = scene.getObjectByName(i);
+        //!    lightPoint.position.set(position.x, position.y, position.z + 2);
+        //!    lightPoint.intensity = vol(dataFreq, i * 8, (i + 1) * 8) / 50 * 30;
+        //!}
+        circleUF.scale.x = 1 + 0 * vol(dataFreq, 128, 256) / 1500 + vol(dataFreq, 1, 8) / 1000;; // SCALE
+        circleUF.scale.y = 1 + 0 * vol(dataFreq, 128, 256) / 1500 + vol(dataFreq, 1, 8) / 1000;; // SCALE
+        circleUF.scale.z = 1 + 0 * vol(dataFreq, 128, 256) / 1500 + vol(dataFreq, 1, 8) / 1000;; // SCALE
+        circleUF.material.transparent = true;
+        circleUF.material.opacity = 0.31 + vol(dataFreq, 128, 256) / 900;
 
 
-    circleCE.scale.x = 1 + vol(dataFreq, 1, 6) / 1000; // SCALE
-    circleCE.scale.y = 1 + vol(dataFreq, 1, 6) / 1000; // SCALE
-    circleCE.scale.z = 1 + vol(dataFreq, 1, 6) / 1000; // SCALE
-    circleCE.material.transparent = true;
-    circleCE.material.opacity = 0.35 + vol(dataFreq, 1, 6) / 1000;
+        circleF.scale.x = 1 + vol(dataFreq, 1, 8) / 1000; // SCALE
+        circleF.scale.y = 1 + vol(dataFreq, 1, 8) / 1000; // SCALE
+        circleF.scale.z = 1 + vol(dataFreq, 1, 8) / 1000; // SCALE
+        circleF.material.transparent = true;
 
-    let position = new THREE.Vector3();
-    circleCE.position.set(position.x, position.y, 950);
-    circleF.position.set(position.x, position.y, 950);
-    circleUF.position.set(position.x, position.y, 950);
 
-    this.index = this.index || 0;
-    this.index++;
-    renderer.setPixelRatio(0.8);
-    composer.render();
+        circleCE.scale.x = 1 + vol(dataFreq, 1, 8) / 1000; // SCALE
+        circleCE.scale.y = 1 + vol(dataFreq, 1, 8) / 1000; // SCALE
+        circleCE.scale.z = 1 + vol(dataFreq, 1, 8) / 1000; // SCALE
+        circleCE.material.transparent = true;
+        circleCE.material.opacity = 0.36 + vol(dataFreq, 1, 8) / 1000;
+
+        let position = new THREE.Vector3();
+        circleCE.position.set(position.x + 20, position.y, 950);
+        circleF.position.set(position.x + 20, position.y, 950);
+        circleUF.position.set(position.x + 20, position.y, 950);
+
+        this.index = this.index || 0;
+        this.index++;
+        renderer.setPixelRatio(1);
+        composer.render();
+        //console.log(textar);
+        if (pl2.currentTime + 0.2 > begar[pos] / 1000) {
+            console.log(textar[pos]);
+            textIt(begar[pos], endar[pos], textar[pos]);
+            pos += 1;
+        }
+    }
     //console.log(dataFreq);
 }
