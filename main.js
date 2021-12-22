@@ -156,7 +156,7 @@ function textIt(start, end, word) {
     setTimeout(() => textnode.style.color = "rgba(255, 255, 255, 1)", 1);
     last_len = word.length;
     last_end = end;
-    setTimeout(() => textnode.classList.add("text-hide"), end - start);
+    setTimeout(() => textnode.classList.add("text-hide"), end - start + 20);
 }
 
 init();
@@ -187,7 +187,7 @@ scene.add(circleCE);
 
 animate();
 function init() {
-    txt = readTextFile("textKostylPrepared.xml");
+    txt = readTextFile("textKostylCuttedPrepared.xml");
     //console.log(txt)
     var lines = txt.split('\n');
     for (var i = 0; i < lines.length; i++) {
